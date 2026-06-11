@@ -1,16 +1,17 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.androidLint)
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    alias(libs.plugins.vanniktech.mavenPublish)
 }
 
-group = "com.stockgro.anchor"
-version = "1.0.0"
+group = "com.stockgro"
+version = "1.0.1"
 
 kotlin {
     android {
@@ -96,22 +97,20 @@ kotlin {
 }
 
 publishing {
+    val props = gradleLocalProperties(rootDir, providers)
     repositories {
         maven {
             name = "githubPackages"
             url = uri("https://maven.pkg.github.com/Pranathi-StockGro/Anchor")
-            credentials(PasswordCredentials::class)
+            credentials{
+                username = props.getProperty("githubPackagesUsername")
+                password = props.getProperty("githubPackagesPassword")
+            }
         }
     }
 }
 
 mavenPublishing {
-    // Define coordinates for the published artifact
-    coordinates(
-        groupId = "com.stockgro",
-        artifactId = "anchor",
-        version = "1.0.0"
-    )
 
     // Configure POM metadata for the published artifact
     pom {
