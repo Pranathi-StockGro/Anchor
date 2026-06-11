@@ -1,13 +1,11 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import com.android.build.gradle.internal.utils.createPublishingInfoForLibrary
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.androidLint)
-    id("maven-publish")
     id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
@@ -24,7 +22,7 @@ kotlin {
         }
         minSdk = 24
 
-
+        enableCoreLibraryDesugaring = true
 
         withHostTestBuilder {}.configure {  }
 
@@ -94,18 +92,6 @@ kotlin {
             dependencies {
             }
         }
-    }
-}
-
-publishing {
-    publications {
-        val kotlinMultiplatformPublication = publications.getByName("kotlinMultiplatform") as MavenPublication
-        kotlinMultiplatformPublication.groupId = "com.stockgro"
-        kotlinMultiplatformPublication.artifactId = "anchor"
-        kotlinMultiplatformPublication.version = "1.0.0"
-    }
-    repositories {
-        mavenLocal()
     }
 }
 
