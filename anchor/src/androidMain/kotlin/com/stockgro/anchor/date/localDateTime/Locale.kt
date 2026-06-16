@@ -1,7 +1,5 @@
 package com.stockgro.anchor.date.localDateTime
 
-import com.stockgro.anchor.date.localDateTime.Locale
-
 actual class Locale private constructor(val javaLocale: java.util.Locale) {
 
     actual companion object {
