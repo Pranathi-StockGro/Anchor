@@ -15,13 +15,13 @@ object FormaterUtils {
     ): String = this.toLocalDateTime(timeZone).format(pattern)
 
     fun LocalDateTime.format(pattern: String): String =
-        LocalDateTimeFormatter.ofPattern(pattern, Locale.en()).format(this,)
+        LocalDateTimeFormatter.ofPattern(pattern, Locale.en()).format(this)
 
     fun LocalDate.format(pattern: String): String =
         LocalDateTimeFormatter.ofPattern(pattern, Locale.en()).format(this)
 
     fun LocalTime.format(pattern: String): String =
-        LocalDateTimeFormatter.ofPattern(pattern, Locale.en()).format(this,)
+        LocalDateTimeFormatter.ofPattern(pattern, Locale.en()).format(this)
 
     fun Instant.toRelativeString(timeZone: TimeZone, pattern: String): String {
         val now = Clock.System.now()

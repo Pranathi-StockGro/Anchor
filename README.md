@@ -1,31 +1,74 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# Anchor
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Anchor is a Kotlin Multiplatform (KMP) library providing enhanced date and time utilities, building upon `kotlinx-datetime`. It provides a consistent API across Android and iOS for formatting, timezone conversions, and type-safe epoch time handling.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## Features
 
-### Running the apps
+- **Multiplatform Locale Support**: Unified `Locale` class for Android and iOS.
+- **Type-safe Epoch Time**: `EpochSeconds` and `EpochMillis` value classes to prevent unit confusion.
+- **Advanced Formatting**: Easy-to-use `LocalDateTimeFormatter` with caching for performance.
+- **Timezone Utilities**: Shorthand methods for converting between UTC and system default timezones.
+- **Relative Time**: Convert `Instant` to human-readable strings like "5 mins ago".
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+## Installation
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+Add `mavenLocal()` to your repository list in `settings.gradle.kts`:
 
-### Running tests
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        mavenLocal() 
+    }
+}
+```
 
-Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
+Then add the dependency to your module's `build.gradle.kts`:
 
-- Android tests: `./gradlew :shared:testAndroidHostTest`
-- iOS tests: `./gradlew :shared:iosSimulatorArm64Test`
+```kotlin
+dependencies {
+    implementation("com.stockgro.anchor:1.0.0")
+}
+```
 
----
+## Usage
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+### Formatting
+```kotlin
+import com.stockgro.anchor.date.localDateTime.FormaterUtils.format
+
+val now = LocalDateTime.now()
+val formatted = now.format("dd MMM yyyy, hh:mm a")
+```
+
+### Timezone Conversion
+```kotlin
+import com.stockgro.anchor.date.localDateTime.toUtc
+import com.stockgro.anchor.date.localDateTime.fromUtc
+
+val utcTime = localTime.toUtc()
+val localTime = utcTime.fromUtc()
+```
+
+### Epoch Time
+```kotlin
+import com.stockgro.anchor.date.epochTime.EpochTimeUtils.toEpochSeconds
+
+val seconds = 1672531200L.toEpochSeconds()
+val instant = seconds.toInstant()
+```
+
+### Relative Time
+```kotlin
+import com.stockgro.anchor.date.localDateTime.FormaterUtils.toRelativeString
+
+val relative = instant.toRelativeString(TimeZone.currentSystemDefault(), "dd/MM/yyyy")
+```
+
+## Optimization
+
+Anchor is designed with performance in mind:
+- Uses **Value Classes** for epoch time to avoid object allocations.
+- **Internal Caching**: Caches `LocalDateTimeFormatter` and `Locale` instances to reuse expensive underlying platform formatters (`java.time.format.DateTimeFormatter` on Android and `NSDateFormatter` on iOS).
+- **Inline Functions**: Frequently used utility methods are marked as `inline` to reduce function call overhead.
