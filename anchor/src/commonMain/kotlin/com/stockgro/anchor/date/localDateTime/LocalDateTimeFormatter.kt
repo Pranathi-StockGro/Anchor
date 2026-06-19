@@ -6,11 +6,12 @@ import kotlinx.datetime.LocalTime
 
 expect class LocalDateTimeFormatter {
 
-    fun format(localDateTime: LocalDateTime): String
-    fun format(localTime: LocalTime): String
-    fun format(localDate: LocalDate): String
+    internal fun format(localDateTime: LocalDateTime): String
+    internal fun format(localTime: LocalTime): String
+    internal fun format(localDate: LocalDate): String
+    internal fun parse(text: String): LocalDateTime
 
     companion object {
-        fun ofPattern(pattern: String, locale: Locale): LocalDateTimeFormatter
+        internal fun ofPattern(pattern: String, locale: Locale): LocalDateTimeFormatter
     }
 }

@@ -25,7 +25,7 @@ kotlin {
 
         enableCoreLibraryDesugaring = true
 
-        withHostTestBuilder {}.configure {  }
+        withHostTestBuilder {}.configure { }
 
         withDeviceTestBuilder {
             sourceSetTreeName = "test"
@@ -65,7 +65,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                api(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.datetime)
             }
         }
 
@@ -102,7 +102,7 @@ publishing {
         maven {
             name = "githubPackages"
             url = uri("https://maven.pkg.github.com/Pranathi-StockGro/Anchor")
-            credentials{
+            credentials {
                 username = props.getProperty("githubPackagesUsername")
                 password = props.getProperty("githubPackagesPassword")
             }

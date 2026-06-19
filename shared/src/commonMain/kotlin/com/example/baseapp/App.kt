@@ -40,13 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.stockgro.anchor.date.epochTime.*
 import com.stockgro.anchor.date.localDateTime.DateTimePatterns
-import com.stockgro.anchor.date.localDateTime.FormaterUtils.format
-import com.stockgro.anchor.date.localDateTime.changeTimeZone
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Instant
+import com.stockgro.anchor.date.timeZone.*
 
 enum class InputType(val label: String) {
     EPOCH_SECONDS("Epoch Seconds"),
@@ -57,14 +53,14 @@ enum class InputType(val label: String) {
 // Data class tracking TimeZone layout options
 data class UiTimeZoneDisplay(
     val displayName: String,
-    val zone: TimeZone
+    val zoneId: String
 )
 
 val appTargetTimeZoneList = listOf(
-    UiTimeZoneDisplay("System Default", TimeZone.currentSystemDefault()),
-    UiTimeZoneDisplay("India (IST)", TimeZone.of("Asia/Kolkata")),
-    UiTimeZoneDisplay("UAE (GST)", TimeZone.of("Asia/Dubai")),
-    UiTimeZoneDisplay("Coordinated Universal Time (UTC)", TimeZone.UTC)
+    UiTimeZoneDisplay("System Default", TimeZoneIds.systemDefault()),
+    UiTimeZoneDisplay("India (IST)", TimeZoneIds.INDIA),
+    UiTimeZoneDisplay("UAE (GST)", TimeZoneIds.DUBAI),
+    UiTimeZoneDisplay("Coordinated Universal Time (UTC)", TimeZoneIds.UTC)
 )
 
 
@@ -111,7 +107,7 @@ fun DateTimeConverterScreen() {
     var selectedInputType by remember { mutableStateOf(InputType.EPOCH_SECONDS) }
 
     // Source is LOCKED to System Default. User chooses a target.
-    val sourceSystemZone = remember { TimeZone.currentSystemDefault() }
+    val sourceSystemZoneId: String = remember { TimeZoneIds.systemDefault() }
     var selectedTargetZoneItem by remember { mutableStateOf(appTargetTimeZoneList.first()) }
 
     var textInput by remember { mutableStateOf("") }
@@ -122,24 +118,21 @@ fun DateTimeConverterScreen() {
     var showTargetZoneDropdown by remember { mutableStateOf(false) }
 
     // --- PIPELINE 1: Extract the baseline absolute instant ---
-    val baseInstant = remember(textInput, selectedPickerMillis, selectedInputType) {
+    val baseEpoch = remember(textInput, selectedPickerMillis, selectedInputType) {
         try {
             when (selectedInputType) {
                 InputType.EPOCH_SECONDS -> {
                     if (textInput.isBlank()) return@remember null
-                    val seconds = textInput.toLongOrNull() ?: return@remember null
-                    Instant.fromEpochSeconds(seconds)
+                    textInput.toLongOrNull()?.toEpochSeconds()
                 }
 
                 InputType.EPOCH_MILLIS -> {
                     if (textInput.isBlank()) return@remember null
-                    val millis = textInput.toLongOrNull() ?: return@remember null
-                    Instant.fromEpochMilliseconds(millis)
+                    textInput.toLongOrNull()?.toEpochMillis()
                 }
 
                 InputType.DATE_PICKER -> {
-                    val millis = selectedPickerMillis ?: return@remember null
-                    Instant.fromEpochMilliseconds(millis)
+                    selectedPickerMillis?.toEpochMillis()
                 }
             }
         } catch (e: Exception) {
@@ -148,28 +141,20 @@ fun DateTimeConverterScreen() {
     }
 
     // --- PIPELINE 2: Format the Local System Time Output ---
-    val systemTimeResult = remember(baseInstant, selectedPatternItem) {
-        if (baseInstant == null) "Waiting for valid input..."
-        else baseInstant.format(selectedPatternItem.patternString, sourceSystemZone)
+    val systemTimeResult = remember(baseEpoch, selectedPatternItem) {
+        when (baseEpoch) {
+            is EpochSeconds -> baseEpoch.format(selectedPatternItem.patternString, sourceSystemZoneId)
+            is EpochMillis -> baseEpoch.format(selectedPatternItem.patternString, sourceSystemZoneId)
+            else -> "Waiting for valid input..."
+        }
     }
 
     // --- PIPELINE 3: Shift time and format Target Zone Output ---
-    val targetTimeResult = remember(baseInstant, selectedPatternItem, selectedTargetZoneItem) {
-        if (baseInstant == null) return@remember "Waiting for valid input..."
-        try {
-            // Convert current absolute instant to local wall clock time representation
-            val sourceLocalDateTime = baseInstant.toLocalDateTime(sourceSystemZone)
-
-            // Shift zone mapping utilizing your library's changeTimeZone extension function
-            val shiftedLocalDateTime = sourceLocalDateTime.changeTimeZone(
-                from = sourceSystemZone,
-                to = selectedTargetZoneItem.zone
-            )
-
-            val finalInstant = shiftedLocalDateTime.toInstant(selectedTargetZoneItem.zone)
-            finalInstant.format(selectedPatternItem.patternString, selectedTargetZoneItem.zone)
-        } catch (e: Exception) {
-            "Conversion Error: ${e.message}"
+    val targetTimeResult = remember(baseEpoch, selectedPatternItem, selectedTargetZoneItem) {
+        when (baseEpoch) {
+            is EpochSeconds -> baseEpoch.format(selectedPatternItem.patternString, selectedTargetZoneItem.zoneId)
+            is EpochMillis -> baseEpoch.format(selectedPatternItem.patternString, selectedTargetZoneItem.zoneId)
+            else -> "Waiting for valid input..."
         }
     }
 
@@ -215,7 +200,7 @@ fun DateTimeConverterScreen() {
             InputType.DATE_PICKER -> {
                 OutlinedTextField(
                     value = selectedPickerMillis?.let {
-                        Instant.fromEpochMilliseconds(it).toString()
+                        it.toEpochMillis().format(DateTimePatterns.DATE_FULL)
                     } ?: "No Date Selected",
                     onValueChange = {},
                     label = { Text("Picked Calendar Date") },
@@ -312,7 +297,7 @@ fun DateTimeConverterScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Your Local Time (${sourceSystemZone.id}):", style = MaterialTheme.typography.labelMedium)
+                Text("Your Local Time (${sourceSystemZoneId}):", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = systemTimeResult, style = MaterialTheme.typography.titleLarge)
             }
@@ -325,7 +310,7 @@ fun DateTimeConverterScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Converted Target Time (${selectedTargetZoneItem.zone.id}):",
+                    "Converted Target Time (${selectedTargetZoneItem.zoneId}):",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

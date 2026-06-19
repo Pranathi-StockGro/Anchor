@@ -6,7 +6,9 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalQueries
 
 actual class LocalDateTimeFormatter private constructor(
     private val pattern: String,
@@ -17,20 +19,27 @@ actual class LocalDateTimeFormatter private constructor(
         DateTimeFormatter.ofPattern(pattern, locale.javaLocale)
     }
 
-    actual fun format(localDateTime: LocalDateTime): String {
+    internal actual fun format(localDateTime: LocalDateTime): String {
         return formatter.format(localDateTime.toJavaLocalDateTime())
     }
 
-    actual fun format(localTime: LocalTime): String {
+    internal actual fun format(localTime: LocalTime): String {
         return formatter.format(localTime.toJavaLocalTime())
     }
 
-    actual fun format(localDate: LocalDate): String {
+    internal actual fun format(localDate: LocalDate): String {
         return formatter.format(localDate.toJavaLocalDate())
     }
 
+    internal actual fun parse(text: String): LocalDateTime {
+        val temporalAccessor = formatter.parse(text)
+        val localDate = temporalAccessor.query(TemporalQueries.localDate()) ?: java.time.LocalDate.now()
+        val localTime = temporalAccessor.query(TemporalQueries.localTime()) ?: java.time.LocalTime.MIDNIGHT
+        return java.time.LocalDateTime.of(localDate, localTime).toKotlinLocalDateTime()
+    }
+
     actual companion object {
-        actual fun ofPattern(pattern: String, locale: Locale): LocalDateTimeFormatter {
+        internal actual fun ofPattern(pattern: String, locale: Locale): LocalDateTimeFormatter {
             return LocalDateTimeFormatter(pattern, locale)
         }
     }

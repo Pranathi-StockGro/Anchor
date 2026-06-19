@@ -1,6 +1,5 @@
 package com.stockgro.anchor.date.localDateTime
 
-import com.stockgro.anchor.date.localDateTime.Locale
 import platform.Foundation.NSLocale
 import platform.Foundation.currentLocale
 
