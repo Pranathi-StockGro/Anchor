@@ -91,6 +91,5 @@ fun LocalDateTime.fromUtc(): LocalDateTime {
 
 infix fun LocalDateTime.durationUntil(end: LocalDateTime): Duration {
     val timeZone = TimeZone.currentSystemDefault()
-
     return end.toInstant(timeZone) - this.toInstant(timeZone)
 }

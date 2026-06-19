@@ -38,15 +38,15 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-        maven {
-            name = "gitHubPackages"
-            url = uri("https://maven.pkg.github.com/Pranathi-StockGro/Anchor")
-            credentials {
-                username = localProperties.getProperty("githubPackagesUsername")
-                password = localProperties.getProperty("githubPackagesPassword")
-            }
-        }
-//        mavenLocal()
+//        maven {
+//            name = "gitHubPackages"
+//            url = uri("https://maven.pkg.github.com/Pranathi-StockGro/Anchor")
+//            credentials {
+//                username = localProperties.getProperty("githubPackagesUsername")
+//                password = localProperties.getProperty("githubPackagesPassword")
+//            }
+//        }
+        mavenLocal()
     }
 }
 

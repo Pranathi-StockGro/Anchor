@@ -42,7 +42,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stockgro.anchor.date.localDateTime.DateTimePatterns
 import com.stockgro.anchor.date.localDateTime.FormaterUtils.format
+import com.stockgro.anchor.date.localDateTime.changeTimeZone
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 enum class InputType(val label: String) {
@@ -50,6 +53,19 @@ enum class InputType(val label: String) {
     EPOCH_MILLIS("Epoch Millis"),
     DATE_PICKER("Date Picker")
 }
+
+// Data class tracking TimeZone layout options
+data class UiTimeZoneDisplay(
+    val displayName: String,
+    val zone: TimeZone
+)
+
+val appTargetTimeZoneList = listOf(
+    UiTimeZoneDisplay("System Default", TimeZone.currentSystemDefault()),
+    UiTimeZoneDisplay("India (IST)", TimeZone.of("Asia/Kolkata")),
+    UiTimeZoneDisplay("UAE (GST)", TimeZone.of("Asia/Dubai")),
+    UiTimeZoneDisplay("Coordinated Universal Time (UTC)", TimeZone.UTC)
+)
 
 
 @Composable
@@ -91,43 +107,69 @@ val appPatternList = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateTimeConverterScreen() {
-    // FIX 1: Track the whole UI Presentation Object, not a raw string
     var selectedPatternItem by remember { mutableStateOf(appPatternList.first()) }
     var selectedInputType by remember { mutableStateOf(InputType.EPOCH_SECONDS) }
-    val targetZone = remember { TimeZone.currentSystemDefault() }
+
+    // Source is LOCKED to System Default. User chooses a target.
+    val sourceSystemZone = remember { TimeZone.currentSystemDefault() }
+    var selectedTargetZoneItem by remember { mutableStateOf(appTargetTimeZoneList.first()) }
 
     var textInput by remember { mutableStateOf("") }
     var selectedPickerMillis by remember { mutableStateOf<Long?>(null) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showPatternDropdown by remember { mutableStateOf(false) }
+    var showTargetZoneDropdown by remember { mutableStateOf(false) }
 
-    // FIX 2: Guard calculations against empty inputs and missing selection states
-    val convertedResult = remember(textInput, selectedPickerMillis, selectedInputType, selectedPatternItem) {
+    // --- PIPELINE 1: Extract the baseline absolute instant ---
+    val baseInstant = remember(textInput, selectedPickerMillis, selectedInputType) {
         try {
-            val instant: Instant = when (selectedInputType) {
+            when (selectedInputType) {
                 InputType.EPOCH_SECONDS -> {
-                    if (textInput.isBlank()) return@remember "Enter Epoch Seconds"
-                    val seconds = textInput.toLongOrNull() ?: return@remember "Invalid Number"
+                    if (textInput.isBlank()) return@remember null
+                    val seconds = textInput.toLongOrNull() ?: return@remember null
                     Instant.fromEpochSeconds(seconds)
                 }
 
                 InputType.EPOCH_MILLIS -> {
-                    if (textInput.isBlank()) return@remember "Enter Epoch Milliseconds"
-                    val millis = textInput.toLongOrNull() ?: return@remember "Invalid Number"
+                    if (textInput.isBlank()) return@remember null
+                    val millis = textInput.toLongOrNull() ?: return@remember null
                     Instant.fromEpochMilliseconds(millis)
                 }
 
                 InputType.DATE_PICKER -> {
-                    val millis = selectedPickerMillis ?: return@remember "Select a date using the icon"
+                    val millis = selectedPickerMillis ?: return@remember null
                     Instant.fromEpochMilliseconds(millis)
                 }
             }
-
-            // Execute formatting safely using the clean wrapper property string
-            instant.format(selectedPatternItem.patternString, targetZone)
         } catch (e: Exception) {
-            "Formatting Error: ${e.message}" // Prints the exact failure to the UI box instead of masking it
+            null
+        }
+    }
+
+    // --- PIPELINE 2: Format the Local System Time Output ---
+    val systemTimeResult = remember(baseInstant, selectedPatternItem) {
+        if (baseInstant == null) "Waiting for valid input..."
+        else baseInstant.format(selectedPatternItem.patternString, sourceSystemZone)
+    }
+
+    // --- PIPELINE 3: Shift time and format Target Zone Output ---
+    val targetTimeResult = remember(baseInstant, selectedPatternItem, selectedTargetZoneItem) {
+        if (baseInstant == null) return@remember "Waiting for valid input..."
+        try {
+            // Convert current absolute instant to local wall clock time representation
+            val sourceLocalDateTime = baseInstant.toLocalDateTime(sourceSystemZone)
+
+            // Shift zone mapping utilizing your library's changeTimeZone extension function
+            val shiftedLocalDateTime = sourceLocalDateTime.changeTimeZone(
+                from = sourceSystemZone,
+                to = selectedTargetZoneItem.zone
+            )
+
+            val finalInstant = shiftedLocalDateTime.toInstant(selectedTargetZoneItem.zone)
+            finalInstant.format(selectedPatternItem.patternString, selectedTargetZoneItem.zone)
+        } catch (e: Exception) {
+            "Conversion Error: ${e.message}"
         }
     }
 
@@ -188,27 +230,54 @@ fun DateTimeConverterScreen() {
             }
         }
 
+        Text("Select Target Time Zone Conversion:", style = MaterialTheme.typography.titleMedium)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = selectedTargetZoneItem.displayName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Convert Destination Zone") },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    Icon(
+                        Icons.Default.ArrowDropDown, contentDescription = null,
+                        Modifier.clickable { showTargetZoneDropdown = true })
+                }
+            )
+            Box(modifier = Modifier.matchParentSize().clickable { showTargetZoneDropdown = true })
+
+            DropdownMenu(
+                expanded = showTargetZoneDropdown,
+                onDismissRequest = { showTargetZoneDropdown = false },
+                modifier = Modifier.fillMaxWidth(0.9f)
+            ) {
+                appTargetTimeZoneList.forEach { zoneItem ->
+                    DropdownMenuItem(
+                        text = { Text(zoneItem.displayName) },
+                        onClick = {
+                            selectedTargetZoneItem = zoneItem
+                            showTargetZoneDropdown = false
+                        }
+                    )
+                }
+            }
+        }
+
         Text("Target Presentation Format:", style = MaterialTheme.typography.titleMedium)
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
-                value = selectedPatternItem.name, // FIX 3: Show the display label name here
+                value = selectedPatternItem.name,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Active Formatter Pattern") },
                 modifier = Modifier.fillMaxWidth(),
                 trailingIcon = {
                     Icon(
-                        Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        Modifier.clickable { showPatternDropdown = true }
-                    )
+                        Icons.Default.ArrowDropDown, contentDescription = null,
+                        Modifier.clickable { showPatternDropdown = true })
                 }
             )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable { showPatternDropdown = true }
-            )
+            Box(modifier = Modifier.matchParentSize().clickable { showPatternDropdown = true })
 
             DropdownMenu(
                 expanded = showPatternDropdown,
@@ -219,19 +288,12 @@ fun DateTimeConverterScreen() {
                     DropdownMenuItem(
                         text = {
                             Column {
-                                Text(
-                                    patternVariant.name,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    patternVariant.example,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
+                                Text(patternVariant.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(patternVariant.example, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                             }
                         },
                         onClick = {
-                            selectedPatternItem = patternVariant // Safely save the display item variant configuration
+                            selectedPatternItem = patternVariant
                             showPatternDropdown = false
                         }
                     )
@@ -239,29 +301,36 @@ fun DateTimeConverterScreen() {
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
+        // --- DUAL OUTPUT PANEL ---
+        Text("Conversion Results:", style = MaterialTheme.typography.titleMedium)
+
+        // 1. Current Local System Time Presentation Box
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Your Local Time (${sourceSystemZone.id}):", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = systemTimeResult, style = MaterialTheme.typography.titleLarge)
+            }
+        }
+
+        // 2. Transformed Target Time Presentation Box
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Formatted UI Conversion Output:",
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = convertedResult,
-                    style = MaterialTheme.typography.titleLarge,
+                    "Converted Target Time (${selectedTargetZoneItem.zone.id}):",
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Time Zone Context: ${targetZone.id}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
+                Text(text = targetTimeResult, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
     }
