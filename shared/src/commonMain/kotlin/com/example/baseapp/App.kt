@@ -41,7 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.stockgro.anchor.date.epochTime.*
-import com.stockgro.anchor.date.localDateTime.DateTimePatterns
+import com.stockgro.anchor.date.localDateTime.*
 import com.stockgro.anchor.date.timeZone.*
 
 enum class InputType(val label: String) {
@@ -53,14 +53,14 @@ enum class InputType(val label: String) {
 // Data class tracking TimeZone layout options
 data class UiTimeZoneDisplay(
     val displayName: String,
-    val zoneId: String
+    val timeZone: AnchorTimeZone
 )
 
 val appTargetTimeZoneList = listOf(
-    UiTimeZoneDisplay("System Default", TimeZoneIds.systemDefault()),
-    UiTimeZoneDisplay("India (IST)", TimeZoneIds.INDIA),
-    UiTimeZoneDisplay("UAE (GST)", TimeZoneIds.DUBAI),
-    UiTimeZoneDisplay("Coordinated Universal Time (UTC)", TimeZoneIds.UTC)
+    UiTimeZoneDisplay("System Default", AnchorTimeZone.systemDefault()),
+    UiTimeZoneDisplay("India (IST)", AnchorTimeZone.INDIA),
+    UiTimeZoneDisplay("UAE (GST)", AnchorTimeZone.DUBAI),
+    UiTimeZoneDisplay("Coordinated Universal Time (UTC)", AnchorTimeZone.UTC)
 )
 
 
@@ -75,29 +75,29 @@ fun App() {
 
 data class UiPatternDisplay(
     val name: String,
-    val patternString: String,
+    val pattern: DateTimePattern,
     val example: String
 )
 
 // A static list created on the App side using your library constants
 val appPatternList = listOf(
-    UiPatternDisplay("DATE_TIME_12H", DateTimePatterns.DATE_TIME_12H, "10 Jun 2026, 02:54:59 PM"),
-    UiPatternDisplay("DATE_TIME_24H", DateTimePatterns.DATE_TIME_24H, "10 Jun 2026, 14:54:59"),
-    UiPatternDisplay("DATE_TIME_SHORT", DateTimePatterns.DATE_TIME_SHORT, "10 Jun 2026, 02:54 PM"),
-    UiPatternDisplay("DATE_TIME_PIPE", DateTimePatterns.DATE_TIME_PIPE, "07 May 2025 | 10:33"),
-    UiPatternDisplay("DATE_DOT_TIME", DateTimePatterns.DATE_DOT_TIME, "10 Jun . 9:34 AM"),
-    UiPatternDisplay("DATE_FULL", DateTimePatterns.DATE_FULL, "10 June 2026"),
-    UiPatternDisplay("DATE_SHORT", DateTimePatterns.DATE_SHORT, "10 Jun 2026"),
-    UiPatternDisplay("DATE_NUMERIC", DateTimePatterns.DATE_NUMERIC, "10/06/2026"),
-    UiPatternDisplay("TIME_12H", DateTimePatterns.TIME_12H, "12:54 PM"),
+    UiPatternDisplay("DATE_TIME_12H", DateTimePattern.DATE_TIME_12H, "10 Jun 2026, 02:54:59 PM"),
+    UiPatternDisplay("DATE_TIME_24H", DateTimePattern.DATE_TIME_24H, "10 Jun 2026, 14:54:59"),
+    UiPatternDisplay("DATE_TIME_SHORT", DateTimePattern.DATE_TIME_SHORT, "10 Jun 2026, 02:54 PM"),
+    UiPatternDisplay("DATE_TIME_PIPE", DateTimePattern.DATE_TIME_PIPE, "07 May 2025 | 10:33"),
+    UiPatternDisplay("DATE_DOT_TIME", DateTimePattern.DATE_DOT_TIME, "10 Jun . 9:34 AM"),
+    UiPatternDisplay("DATE_FULL", DateTimePattern.DATE_FULL, "10 June 2026"),
+    UiPatternDisplay("DATE_SHORT", DateTimePattern.DATE_SHORT, "10 Jun 2026"),
+    UiPatternDisplay("DATE_NUMERIC", DateTimePattern.DATE_NUMERIC, "10/06/2026"),
+    UiPatternDisplay("TIME_12H", DateTimePattern.TIME_12H, "12:54 PM"),
     UiPatternDisplay(
         "TIME_12H_WITH_SECONDS",
-        DateTimePatterns.TIME_12H_WITH_SECONDS,
+        DateTimePattern.TIME_12H_WITH_SECONDS,
         "12:54:59 PM"
     ),
-    UiPatternDisplay("TIME_24H", DateTimePatterns.TIME_24H, "14:54"),
-    UiPatternDisplay("TIME_24H_WITH_SECONDS", DateTimePatterns.TIME_24H_WITH_SECONDS, "14:54:59"),
-    UiPatternDisplay("DATE_TIME_12H_WITH_WEEKDAY", DateTimePatterns.DATE_TIME_12H_WITH_WEEKDAY, "Wednesday, 10 Jun 2026, 04:45:01 PM")
+    UiPatternDisplay("TIME_24H", DateTimePattern.TIME_24H, "14:54"),
+    UiPatternDisplay("TIME_24H_WITH_SECONDS", DateTimePattern.TIME_24H_WITH_SECONDS, "14:54:59"),
+    UiPatternDisplay("DATE_TIME_12H_WITH_WEEKDAY", DateTimePattern.DATE_TIME_12H_WITH_WEEKDAY, "Wednesday, 10 Jun 2026, 04:45:01 PM")
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,7 +107,7 @@ fun DateTimeConverterScreen() {
     var selectedInputType by remember { mutableStateOf(InputType.EPOCH_SECONDS) }
 
     // Source is LOCKED to System Default. User chooses a target.
-    val sourceSystemZoneId: String = remember { TimeZoneIds.systemDefault() }
+    val sourceSystemZone: AnchorTimeZone = remember { AnchorTimeZone.systemDefault() }
     var selectedTargetZoneItem by remember { mutableStateOf(appTargetTimeZoneList.first()) }
 
     var textInput by remember { mutableStateOf("") }
@@ -143,8 +143,8 @@ fun DateTimeConverterScreen() {
     // --- PIPELINE 2: Format the Local System Time Output ---
     val systemTimeResult = remember(baseEpoch, selectedPatternItem) {
         when (baseEpoch) {
-            is EpochSeconds -> baseEpoch.format(selectedPatternItem.patternString, sourceSystemZoneId)
-            is EpochMillis -> baseEpoch.format(selectedPatternItem.patternString, sourceSystemZoneId)
+            is EpochSeconds -> baseEpoch.format(selectedPatternItem.pattern, sourceSystemZone)
+            is EpochMillis -> baseEpoch.format(selectedPatternItem.pattern, sourceSystemZone)
             else -> "Waiting for valid input..."
         }
     }
@@ -152,8 +152,8 @@ fun DateTimeConverterScreen() {
     // --- PIPELINE 3: Shift time and format Target Zone Output ---
     val targetTimeResult = remember(baseEpoch, selectedPatternItem, selectedTargetZoneItem) {
         when (baseEpoch) {
-            is EpochSeconds -> baseEpoch.format(selectedPatternItem.patternString, selectedTargetZoneItem.zoneId)
-            is EpochMillis -> baseEpoch.format(selectedPatternItem.patternString, selectedTargetZoneItem.zoneId)
+            is EpochSeconds -> baseEpoch.format(selectedPatternItem.pattern, selectedTargetZoneItem.timeZone)
+            is EpochMillis -> baseEpoch.format(selectedPatternItem.pattern, selectedTargetZoneItem.timeZone)
             else -> "Waiting for valid input..."
         }
     }
@@ -200,7 +200,7 @@ fun DateTimeConverterScreen() {
             InputType.DATE_PICKER -> {
                 OutlinedTextField(
                     value = selectedPickerMillis?.let {
-                        it.toEpochMillis().format(DateTimePatterns.DATE_FULL)
+                        it.toEpochMillis().format(DateTimePattern.DATE_FULL)
                     } ?: "No Date Selected",
                     onValueChange = {},
                     label = { Text("Picked Calendar Date") },
@@ -297,7 +297,7 @@ fun DateTimeConverterScreen() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Your Local Time (${sourceSystemZoneId}):", style = MaterialTheme.typography.labelMedium)
+                Text("Your Local Time (${sourceSystemZone.zoneId}):", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = systemTimeResult, style = MaterialTheme.typography.titleLarge)
             }
@@ -310,7 +310,7 @@ fun DateTimeConverterScreen() {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Converted Target Time (${selectedTargetZoneItem.zoneId}):",
+                    "Converted Target Time (${selectedTargetZoneItem.timeZone.zoneId}):",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )

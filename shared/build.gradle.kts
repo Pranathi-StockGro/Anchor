@@ -48,7 +48,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.material.icons.extended)
-            implementation(libs.anchor)
+            implementation(libs.anchor.dateutils)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

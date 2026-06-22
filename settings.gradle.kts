@@ -52,4 +52,4 @@ dependencyResolutionManagement {
 
 include(":androidApp")
 include(":shared")
-include(":anchor")
+include(":dateutils")

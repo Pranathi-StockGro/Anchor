@@ -23,7 +23,7 @@ runner = "1.7.0"
 core = "1.7.0"
 
 [libraries]
-anchor = { module = "com.stockgro:anchor", version.ref = "anchor" }
+anchor-dateutils = { module = "com.stockgro.anchor:dateutils", version.ref = "anchor" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
