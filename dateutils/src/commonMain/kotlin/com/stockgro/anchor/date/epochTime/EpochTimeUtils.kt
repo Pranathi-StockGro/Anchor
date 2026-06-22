@@ -17,9 +17,9 @@ import kotlin.time.Clock.System
 import kotlin.time.Instant
 import kotlin.time.Instant.Companion.fromEpochSeconds
 
-inline fun Long.toEpochSeconds(): EpochSeconds = EpochSeconds(this)
+fun Long.toEpochSeconds(): EpochSeconds = EpochSeconds(this)
 
-inline fun Long.toEpochMillis(): EpochMillis = EpochMillis(this)
+fun Long.toEpochMillis(): EpochMillis = EpochMillis(this)
 
 fun EpochSeconds.Companion.now(): EpochSeconds =
     EpochSeconds(System.now().epochSeconds)
@@ -27,16 +27,16 @@ fun EpochSeconds.Companion.now(): EpochSeconds =
 fun EpochMillis.Companion.now(): EpochMillis =
     EpochMillis(System.now().toEpochMilliseconds())
 
-inline fun EpochSeconds.toEpochMillis(): EpochMillis =
+fun EpochSeconds.toEpochMillis(): EpochMillis =
     EpochMillis(this.value * 1000L)
 
-inline fun EpochMillis.toEpochSeconds(): EpochSeconds =
+fun EpochMillis.toEpochSeconds(): EpochSeconds =
     EpochSeconds(this.value / 1000L)
 
-internal inline fun EpochSeconds.toInstant(): Instant =
+internal fun EpochSeconds.toInstant(): Instant =
     fromEpochSeconds(this.value)
 
-internal inline fun EpochMillis.toInstant(): Instant =
+internal fun EpochMillis.toInstant(): Instant =
     Instant.fromEpochMilliseconds(this.value)
 
 fun EpochSeconds.format(
